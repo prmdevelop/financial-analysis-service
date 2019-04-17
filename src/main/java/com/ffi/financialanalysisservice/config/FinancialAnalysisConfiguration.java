@@ -11,6 +11,7 @@ public class FinancialAnalysisConfiguration {
 
 	private Success success;
 	private Error error;
+	private Template template;
 
 	public static class Success {
 
@@ -101,6 +102,39 @@ public class FinancialAnalysisConfiguration {
 		}
 	}
 	
+	public static class Template{
+		
+		private String dataSheet;
+		private String balanceSheet;
+		private String incomeStatement;
+		private String period;
+		public String getDataSheet() {
+			return dataSheet;
+		}
+		public void setDataSheet(String dataSheet) {
+			this.dataSheet = dataSheet;
+		}
+		public String getBalanceSheet() {
+			return balanceSheet;
+		}
+		public void setBalanceSheet(String balanceSheet) {
+			this.balanceSheet = balanceSheet;
+		}
+		public String getIncomeStatement() {
+			return incomeStatement;
+		}
+		public void setIncomeStatement(String incomeStatement) {
+			this.incomeStatement = incomeStatement;
+		}
+		public String getPeriod() {
+			return period;
+		}
+		public void setPeriod(String period) {
+			this.period = period;
+		}
+		
+	}
+	
 	public Success getSuccess() {
 		return success;
 	}
@@ -115,6 +149,14 @@ public class FinancialAnalysisConfiguration {
 
 	public void setError(Error error) {
 		this.error = error;
+	}
+
+	public Template getTemplate() {
+		return template;
+	}
+
+	public void setTemplate(Template template) {
+		this.template = template;
 	}
 
 }

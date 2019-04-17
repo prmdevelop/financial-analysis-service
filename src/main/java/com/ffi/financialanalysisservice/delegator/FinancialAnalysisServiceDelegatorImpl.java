@@ -43,7 +43,7 @@ import com.ffi.financialanalysisservice.vo.TemplateLabelVO;
 public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisServiceDelegator{
 	
 	@Autowired
-	FinancialAnalysisConfiguration finAnalysis;
+	FinancialAnalysisConfiguration configuration;
 
 	@Autowired
 	TemplateServiceProxy templateProxy;
@@ -65,6 +65,8 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 			List<FinancialDataVO> financialDataVO = mapper.convertValue((List<Object>) financialDetails.get("financial"),new TypeReference<List<FinancialDataVO>>() { });
 			
 			//Change the lineItem id from financial to the template lineItem
+			//Making the lineItem as the key & year and lineItem value as value
+			//Sort the nested map based on the key i.e year in reverse order
 			Map<String, TreeMap<String, Double>> lineItemData = new HashMap<>();
 			outerloop:
 			for(FinancialDataVO financialData : financialDataVO){
@@ -82,8 +84,7 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 					}
 				}
 			}
-			//Making the lineItem as the key & year and lineItem value as value
-			//Sort the nested map based on the key i.e year in reverse order
+			
 			String filePath = (String)templateDetails.get("templatePath");
 			populateTemplate(filePath, lineItemData);
 			url = createFile(filePath);
@@ -95,8 +96,7 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 	}
 	
 	
-	@Override
-	public Map<String,Object> loadTemplate(String templateName,String user){
+	private Map<String,Object> loadTemplate(String templateName,String user){
 		TemplateResponseJson<TemplateResponseObject> responseJson = null;
 		Map<String,Object> templateDetails = null;
 		try {
@@ -109,8 +109,7 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 		return templateDetails;
 	}
 
-	@Override
-	public Map<String,Object> loadFinancial(FinancialServiceRequestJson fServiceRequestJson) {
+	private Map<String,Object> loadFinancial(FinancialServiceRequestJson fServiceRequestJson) {
 		FinancialServiceResponseJson<FinancialServiceResponseObject> responseJson = null;
 		Map<String,Object> financialData = null;
 		try{
@@ -123,8 +122,7 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 		return financialData;
 	}
 
-	@Override
-	public String createFile(String filePath) {
+	private String createFile(String filePath) {
 		OneDriveResponseJson<OneDriveResponseObject> responseJson = null;
 		String url = "";
 		try {
@@ -142,14 +140,14 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 		try (InputStream uploadedFile = new FileInputStream(templatePath);
 				Workbook workbook = new XSSFWorkbook(uploadedFile)) {
 			for (Map.Entry<String, TreeMap<String, Double>> dataEntry : data.entrySet()) {
-				int lineItemIndex = workbook.getNameIndex(dataEntry.getKey());
+				int dataSheetLineItemIndex = workbook.getNameIndex(dataEntry.getKey());
 				int count = 1;
-				if (lineItemIndex != -1) {
-					Name namedLineItem = workbook.getNameAt(lineItemIndex);
+				if (dataSheetLineItemIndex != -1) {
+					Name namedLineItem = workbook.getNameAt(dataSheetLineItemIndex);
 					AreaReference arefLineItem = new AreaReference(namedLineItem.getRefersToFormula(), null);
 					CellReference crefsLineItem = arefLineItem.getAllReferencedCells()[0];
 					for (Map.Entry<String, Double> periodEntry : dataEntry.getValue().entrySet()) {
-						Name namedPeriod = workbook.getNameAt(workbook.getNameIndex("DS_YY" + count));
+						Name namedPeriod = workbook.getNameAt(workbook.getNameIndex(configuration.getTemplate().getDataSheet() + count));
 						AreaReference arefPeriod = new AreaReference(namedPeriod.getRefersToFormula(), null);
 						CellReference[] crefsPeriod = arefPeriod.getAllReferencedCells();
 						for (int i = 0; i < crefsPeriod.length; i++) {
@@ -159,8 +157,11 @@ public class FinancialAnalysisServiceDelegatorImpl implements FinancialAnalysisS
 							cellDataSheet.setCellValue(periodEntry.getValue());
 						}
 
-						Name aNamedBalanceSheet = workbook
-								.getNameAt(workbook.getNameIndex("BS_" + dataEntry.getKey() + "_YY" + count));
+						int balanceOrIncomeSheetLineItemIndex = workbook.getNameIndex(configuration.getTemplate().getBalanceSheet() + dataEntry.getKey() + configuration.getTemplate().getPeriod() + count);
+						if(balanceOrIncomeSheetLineItemIndex == -1){
+							balanceOrIncomeSheetLineItemIndex = workbook.getNameIndex(configuration.getTemplate().getIncomeStatement() + dataEntry.getKey() + configuration.getTemplate().getPeriod() + count);
+						}
+						Name aNamedBalanceSheet = workbook.getNameAt(balanceOrIncomeSheetLineItemIndex);
 						AreaReference arefBalanceSheet = new AreaReference(aNamedBalanceSheet.getRefersToFormula(),
 								null);
 						CellReference crefsBalanceSheet = arefBalanceSheet.getAllReferencedCells()[0];
